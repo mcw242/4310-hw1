@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+
+    <style>
+        .nh {
+            fill: none;
+            stroke: darkgray;
+            stroke-width: 0.5px;
+        }
+
+        .outline{
+            fill: none;
+            stroke: white;
+            stroke-width: 1px;
+        }
+    </style>
+
+</head>
+
+<body>
+<h3>Marie Williams mcw242</h3>
+
+<svg id="map" height="700" width="700" style="margin:20px" />
+<svg id="mapLegend" height="180" width="200" style="border: 2px solid black; margin-bottom: 20px" />
+
+<svg id="histogram" height="600" width="600" style="margin:20px" />
+
+<script>
+
+const mapsvg = d3.select("#map");
+const mapwidth = mapsvg.attr("width");
+const mapheight = mapsvg.attr("height");
+const map = mapsvg.append("g");
+
+const legend = d3.select("#mapLegend");
+
+const histsvg = d3.select("#histogram");
+const histwidth = histsvg.attr("width");
+const histheight = histsvg.attr("height");
+const histmargin = {top: 10, right: 10, bottom: 100, left: 50};
+const chartWidth = histwidth - histmargin.left - histmargin.right;
+const chartHeight = histheight - histmargin.top - histmargin.bottom;
+const hist = histsvg.append("g");
+
+
+const requestData = async function() {
+    const sf = await d3.json("SF-neighborhoods.geo.json");
+    // console.log(sf);
+
+    var trees = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
+
+    var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);
+    // console.log(neighborhoods);
+    var neighborhoodsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);
+    // console.log(neighborhoodsMesh);
+
+    var projection = d3.geoMercator().fitSize([mapwidth, mapheight], neighborhoods);
+    var path = d3.geoPath().projection(projection);
+
+
+    //Code I used to find the counts of trees in each neighborhood
+
+    // var neighborhoodCount = {};
+    //
+    // neighborhoods.features.forEach(function(neighborhood) {
+    //     var neighborhoodName = neighborhood.properties.name;
+    //     neighborhoodCount[neighborhoodName] = 0;
+    // });
+    //
+    // trees.forEach(function(tree) {
+    //     neighborhoods.features.forEach(function(neighborhood) {
+    //         var neighborhoodName = neighborhood.properties.name;
+    //         if (d3.geoContains(neighborhood, [tree.Longitude, tree.Latitude])) {
+    //             neighborhoodCount[neighborhoodName]++;
+    //         }
+    //     });
+    // });
+    // console.log(neighborhoodCount);
+
+
+    //Manual encoding of the information found above (to save time)
+    const neighborhood_count = {
+        "Alamo Square": 151, "Anza Vista": 207, "Apparel City": 55, "Aquatic Park / Ft. Mason": 47,
+        "Ashbury Heights": 242, "Balboa Terrace": 92, "Bayview": 1297, "Bernal Heights": 1066,
+        "Bret Harte": 160, "Buena Vista": 313, "Candlestick Point SRA": 43, "Castro": 189,
+        "Cathedral Hill": 450, "Cayuga": 208, "Central Waterfront": 291, "Chinatown": 78, "Civic Center": 375,
+        "Clarendon Heights": 28, "Cole Valley": 114, "Corona Heights": 135, "Cow Hollow": 263,
+        "Crocker Amazon": 238, "Diamond Heights": 176, "Dogpatch": 197, "Dolores Heights": 691,
+        "Downtown / Union Square": 91, "Duboce Triangle": 341, "Eureka Valley": 506, "Excelsior": 607,
+        "Fairmount": 327, "Financial District": 436, "Fishermans Wharf": 267, "Forest Hill": 374,
+        "Forest Knolls": 5, "Glen Park": 385, "Golden Gate Heights": 437, "Golden Gate Park": 12,
+        "Haight Ashbury": 219, "Hayes Valley": 324, "Holly Park": 243, "Hunters Point": 182,
+        "India Basin": 195, "Ingleside": 261, "Ingleside Terraces": 69, "Inner Richmond": 973,
+        "Inner Sunset": 457, "Japantown": 274, "Laguna Honda": 163, "Lake Street": 225,
+        "Lakeshore": 25, "Laurel Heights / Jordan Park": 250, "Lincoln Park / Ft. Miley": 0,
+        "Little Hollywood": 141, "Lone Mountain": 272, "Lower Haight": 324, "Lower Nob Hill": 186,
+        "Lower Pacific Heights": 407, "Marina": 480, "McLaren Park": 4, "Merced Heights": 160,
+        "Merced Manor": 80, "Midtown Terrace": 15, "Mint Hill": 67, "Miraloma Park": 207,
+        "Mission": 1893, "Mission Bay": 416, "Mission Dolores": 514, "Mission Terrace": 460,
+        "Monterey Heights": 44, "Mt. Davidson Manor": 106, "Nob Hill": 309, "Noe Valley": 987,
+        "North Beach": 316, "Northern Waterfront": 320, "Oceanview": 185, "Outer Mission": 178,
+        "Outer Richmond": 961, "Outer Sunset": 1615, "Pacific Heights": 1138, "Panhandle": 262,
+        "Parkmerced": 141, "Parkside": 764, "Parnassus Heights": 136, "Peralta Heights": 195,
+        "Polk Gulch": 173, "Portola": 493, "Potrero Hill": 953, "Presidio Heights": 518,
+        "Presidio National Park": 3, "Presidio Terrace": 169, "Produce Market": 52, "Rincon Hill": 141,
+        "Russian Hill": 546, "Seacliff": 215, "Sherwood Forest": 47, "Showplace Square": 177,
+        "Silver Terrace": 183, "South Beach": 225, "South of Market": 1328, "St. Francis Wood": 284,
+        "St. Marys Park": 92, "Stonestown": 171, "Sunnydale": 49, "Sunnyside": 593, "Sutro Heights": 155,
+        "Telegraph Hill": 169, "Tenderloin": 238, "Treasure Island": 0, "Union Street": 227,
+        "University Mound": 143, "Upper Market": 172, "Visitacion Valley": 239, "West Portal": 311,
+        "Western Addition": 822, "Westwood Highlands": 26, "Westwood Park": 169, "Yerba Buena Island": 0
+    };
+
+    const counts = Object.values(neighborhood_count);
+    colors = ["#d9f4cf", "#ACE1AF", "#71BC78", "#00A550", "#138808"];
+
+    const colorScale = d3.scaleQuantile()
+                         .domain(counts)
+                         .range(colors);
+
+
+    //making the legend (manually, sadly)
+    console.log(Math.max(...counts));
+
+    const quantiles = colorScale.quantiles();
+    console.log(quantiles);
+
+    range = ["0-92", "92-180", "180-262", "262-447", "447-1893"];
+
+    for (let i = 0; i < 5; i++) {
+        legend.append("rect")
+            .attr("x", 10)
+            .attr("y", 50 + i * 25)
+            .attr("width", 15)
+            .attr("height", 15)
+            .attr("fill", colors[i]);
+    };
+
+    legend.append("text")
+        .attr("x", 58)
+        .attr("y", 30)
+        .attr("font-size", 28)
+        .text("Legend");
+
+    for (let i = 0; i < 5; i++) {
+        legend.append("text")
+            .attr("x", 35)
+            .attr("y", 64 + i * 25)
+            .text(range[i]);
+    };
+
+
+
+    map.selectAll("path.nh").data(neighborhoods.features)
+            .join("path")
+            .attr("class", "nh")
+            .attr("d", path)
+            .style("fill", d => colorScale(neighborhood_count[d.properties.name]));
+
+
+    map.selectAll(".tree").data(trees)
+        .join("circle")
+        .attr("class", "tree")
+        .attr("cx", d => projection([d.Longitude, d.Latitude])[0])
+        .attr("cy", d => projection([d.Longitude, d.Latitude])[1])
+        .attr("r", 0.3)
+        .style("fill", "black");
+
+    map.append("path").datum(neighborhoodsMesh)
+            .attr("class","outline")
+            .attr("d", path);
+
+
+    //prettification
+    map.append("text")
+        .attr("x", 0)
+        .attr("y", 50)
+        .attr("font-size", 28)
+        .text("Density of Trees in SF Neighborhoods");
+
+
+
+
+    //building the histogram
+    const top10 = Object
+        .entries(neighborhood_count)
+        .sort(([, a],[, b]) => b-a)
+        .slice(0,10)
+        .map(([n])=> n);
+
+    const treeExtent = [0, neighborhood_count[top10[0]]+107];
+    const treeScale = d3.scaleLinear().domain(treeExtent).range([chartHeight, 0]);
+
+    const neighborhoodScale = d3.scaleBand().domain(top10).range([0, chartWidth]).padding(0.1);
+
+    let leftAxis = d3.axisLeft(treeScale);
+    hist.append("g")
+        .attr("class", "axis")
+        .attr("transform",`translate(${histmargin.left-10},${histmargin.top})`)
+        .call(leftAxis);
+
+    let bottomAxis = d3.axisBottom(neighborhoodScale);
+    hist.append("g")
+        .attr("class", "axis")
+        .attr("transform",`translate(${histmargin.left},${chartHeight+histmargin.top+10})`)
+        .call(bottomAxis)
+        .selectAll("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", ".15em")
+        .attr("transform", "rotate(-65)");
+
+
+    const bars = hist.selectAll("rect").data(top10)
+        .join("rect")
+        .attr("x", (d) => neighborhoodScale(d)+50)
+        .attr("y", (d) => treeScale(neighborhood_count[d])+10)
+        .attr("height", (d) => chartHeight - treeScale(neighborhood_count[d]))
+        .attr("width",neighborhoodScale.bandwidth())
+        .style('fill', '#138808');
+
+    hist.selectAll("text#label").data(top10)
+        .join("text")
+        .attr("class","label")
+        .attr("x", (d) => neighborhoodScale(d)+60)
+        .attr("y", (d) => treeScale(neighborhood_count[d])+5)
+        .attr("font-size", 14)
+        .text((d) => neighborhood_count[d]);
+
+    hist.append("text")
+        .attr("x", 105)
+        .attr("y", 18)
+        .attr("font-size", 20)
+        .text("Count of Trees in Top 10 Tree-Dense SF Neighborhoods");
+
+
+
+}
+
+requestData();
+
+</script>
+
+</body>
+</html>
