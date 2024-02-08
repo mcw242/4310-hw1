@@ -49,10 +49,10 @@ const hist = histsvg.append("g");
 
 
 const requestData = async function() {
-    const sf = await d3.json("SF-neighborhoods.geo.json");
+    const sf = await d3.json("static/SF-neighborhoods.geo.json");
     // console.log(sf);
 
-    var trees = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
+    var trees = await d3.csv("static/Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
 
     var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);
     // console.log(neighborhoods);
